@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/jmoiron/sqlx"
 )
 
@@ -29,8 +30,8 @@ func pick() {
 	defer db.Close()
 	type Image struct {
 		ID   int64  `db:"id"`
-		name string `db:"name"`
-		data []byte `db:"data`
+		Name string `db:"name"`
+		Data []byte `db:"data`
 	}
 	// Image : ID(>1001 は消える.Nameで取得.)/Name/DATA
 	images := []Image{}
@@ -39,11 +40,11 @@ func pick() {
 		panic(err)
 	}
 	for _, image := range images {
-		file, err := os.Create(image.name)
+		file, err := os.Create(image.Name)
 		if err != nil {
 			log.Panic(err)
 		}
-		file.Write(image.data)
+		file.Write(image.Data)
 		file.Close()
 	}
 
