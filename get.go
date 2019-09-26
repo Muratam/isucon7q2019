@@ -17,7 +17,7 @@ func setInitializeFunction() {
 		log.Println("idToUserServer init")
 		users := []User{}
 		idToUserServerMap := map[string]interface{}{}
-		err := db.Select(&users, "SELECT * FROM `users`")
+		err := db.Select(&users, "SELECT * FROM user")
 		if err != nil {
 			panic(err)
 		}
@@ -31,7 +31,7 @@ func setInitializeFunction() {
 		log.Println("accountNameToIDServer init")
 		users := []User{}
 		accountNametoIDServerMap := map[string]interface{}{}
-		err := db.Select(&users, "SELECT * FROM `users`")
+		err := db.Select(&users, "SELECT * FROM user")
 		if err != nil {
 			panic(err)
 		}
