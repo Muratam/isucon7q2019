@@ -1,5 +1,5 @@
 {
-  users: { setInitializeFunction: [ 'SELECT * FROM `users`' ] },
+  user: { setInitializeFunction: [ 'SELECT * FROM user WHERE id <= 1000' ] },
   channel: {
     getInitialize: [ 'DELETE FROM channel WHERE id > 10' ],
     getHistory: [ 'SELECT * FROM channel ORDER BY id' ],

@@ -41,8 +41,8 @@ Message"];
 addMessage[label="add
 Message"];
 
-      users -> setInitializeFunction[style="bold"];
-users[label="users",shape=box, style="filled, bold, rounded", fillcolor="#ffffcc"];
+      user -> setInitializeFunction[style="bold"];
+user[label="user",shape=box, style="filled, bold, rounded", fillcolor="#ffffcc"];
 setInitializeFunction[label="set
 Initialize
 Function"];

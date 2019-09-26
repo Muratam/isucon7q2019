@@ -4,6 +4,7 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"io/ioutil"
+	"log"
 	"math/rand"
 	"net/http"
 	"os"
@@ -152,6 +153,7 @@ func postRegister(c echo.Context) error {
 		}
 		id := idToUserServer.Insert(user)
 		accountNameToIDServer.Set(name, strconv.Itoa(int(id)))
+		log.Println("INSERT:", name, ":", id)
 		return int64(id), nil
 	}
 	userID, err := register(name, pw)
