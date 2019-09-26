@@ -2,7 +2,6 @@ package main
 
 import (
 	crand "crypto/rand"
-	"crypto/sha1"
 	"database/sql"
 	"encoding/binary"
 	"fmt"
@@ -67,11 +66,9 @@ func init() {
 
 func getUser(userID int64) (*User, error) {
 	u := User{}
-	if err := db.Get(&u, "SELECT * FROM user WHERE id = ?", userID); err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		return nil, err
+	ok := idToUserServer.Get(strconv.Itoa(int(userID)), &u)
+	if !ok {
+		return nil, sql.ErrNoRows
 	}
 	return &u, nil
 }
@@ -108,7 +105,8 @@ func ensureLogin(c echo.Context) (*User, error) {
 
 	userID := sessUserID(c)
 	if userID == 0 {
-		goto redirect
+		c.Redirect(http.StatusSeeOther, "/login")
+		return nil, nil
 	}
 
 	user, err = getUser(userID)
@@ -119,49 +117,20 @@ func ensureLogin(c echo.Context) (*User, error) {
 		sess, _ := session.Get("session", c)
 		delete(sess.Values, "user_id")
 		sess.Save(c.Request(), c.Response())
-		goto redirect
+		c.Redirect(http.StatusSeeOther, "/login")
+		return nil, nil
 	}
 	return user, nil
 
-redirect:
-	c.Redirect(http.StatusSeeOther, "/login")
-	return nil, nil
 }
 
-func randomString(n int) string {
-	b := make([]byte, n)
-	z := len(LettersAndDigits)
-
-	for i := 0; i < n; i++ {
-		b[i] = LettersAndDigits[rand.Intn(z)]
-	}
-	return string(b)
-}
-
-func register(name, password string) (int64, error) {
-	salt := randomString(20)
-	digest := fmt.Sprintf("%x", sha1.Sum([]byte(salt+password)))
-
-	res, err := db.Exec(
-		"INSERT INTO user (name, salt, password, display_name, avatar_icon, created_at)"+
-			" VALUES (?, ?, ?, ?, ?, NOW())",
-		name, salt, digest, name, "default.png")
-	if err != nil {
-		return 0, err
-	}
-	return res.LastInsertId()
-}
-
-// request handlers
-
+// TODO: 多分N+1
 func jsonifyMessage(m Message) (map[string]interface{}, error) {
 	u := User{}
-	err := db.Get(&u, "SELECT name, display_name, avatar_icon FROM user WHERE id = ?",
-		m.UserID)
-	if err != nil {
-		return nil, err
+	ok := idToUserServer.Get(strconv.Itoa(int(m.UserID)), &u)
+	if !ok {
+		return nil, echo.ErrNotFound
 	}
-
 	r := make(map[string]interface{})
 	r["id"] = m.ID
 	r["user"] = u

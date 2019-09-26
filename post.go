@@ -2,15 +2,16 @@ package main
 
 import (
 	"crypto/sha1"
-	"database/sql"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
-	"github.com/go-sql-driver/mysql"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/labstack/echo"
 )
 
@@ -76,7 +77,7 @@ func postProfile(c echo.Context) error {
 
 		avatarName = fmt.Sprintf("%x%s", sha1.Sum(avatarData), ext)
 	}
-
+	dirty := false
 	if avatarName != "" && len(avatarData) > 0 {
 		file, err := os.Create("/home/isucon/icons/" + avatarName)
 		if err != nil {
@@ -84,19 +85,16 @@ func postProfile(c echo.Context) error {
 		}
 		defer file.Close()
 		file.Write(avatarData)
-		_, err = db.Exec("UPDATE user SET avatar_icon = ? WHERE id = ?", avatarName, self.ID)
-		if err != nil {
-			return err
-		}
+		dirty = true
+		self.AvatarIcon = avatarName
 	}
-
 	if name := c.FormValue("display_name"); name != "" {
-		_, err := db.Exec("UPDATE user SET display_name = ? WHERE id = ?", name, self.ID)
-		if err != nil {
-			return err
-		}
+		dirty = true
+		self.DisplayName = name
 	}
-
+	if dirty {
+		idToUserServer.Set(strconv.Itoa(int(self.ID)), self)
+	}
 	return c.Redirect(http.StatusSeeOther, "/")
 }
 func postMessage(c echo.Context) error {
@@ -129,14 +127,40 @@ func postRegister(c echo.Context) error {
 	if name == "" || pw == "" {
 		return ErrBadReqeust
 	}
+	randomString := func(n int) string {
+		b := make([]byte, n)
+		z := len(LettersAndDigits)
+
+		for i := 0; i < n; i++ {
+			b[i] = LettersAndDigits[rand.Intn(z)]
+		}
+		return string(b)
+	}
+	register := func(name, password string) (int64, error) {
+		if accountNameToIDServer.Exists(name) {
+			return 0, echo.ErrForbidden
+		}
+		salt := randomString(20)
+		digest := fmt.Sprintf("%x", sha1.Sum([]byte(salt+password)))
+		user := User{
+			ID:          -1,
+			Name:        name,
+			Salt:        salt,
+			Password:    digest,
+			DisplayName: name,
+			AvatarIcon:  "default.png",
+			CreatedAt:   time.Now().Truncate(time.Second),
+		}
+		id := idToUserServer.Insert(user)
+		idStr := strconv.Itoa(int(id))
+		user.ID = int64(id)
+		idToUserServer.Set(idStr, user)
+		accountNameToIDServer.Set(name, idStr)
+		return int64(id), nil
+	}
 	userID, err := register(name, pw)
 	if err != nil {
-		if merr, ok := err.(*mysql.MySQLError); ok {
-			if merr.Number == 1062 { // Duplicate entry xxxx for key zzzz
-				return c.NoContent(http.StatusConflict)
-			}
-		}
-		return err
+		return c.NoContent(http.StatusConflict)
 	}
 	sessSetUserID(c, userID)
 	return c.Redirect(http.StatusSeeOther, "/")
@@ -148,14 +172,13 @@ func postLogin(c echo.Context) error {
 		return ErrBadReqeust
 	}
 
-	var user User
-	err := db.Get(&user, "SELECT * FROM user WHERE name = ?", name)
-	if err == sql.ErrNoRows {
+	id := ""
+	ok := accountNameToIDServer.Get(name, &id)
+	if !ok {
 		return echo.ErrForbidden
-	} else if err != nil {
-		return err
 	}
-
+	user := User{}
+	idToUserServer.Get(id, &user)
 	digest := fmt.Sprintf("%x", sha1.Sum([]byte(user.Salt+pw)))
 	if digest != user.Password {
 		return echo.ErrForbidden

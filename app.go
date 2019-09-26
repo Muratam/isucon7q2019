@@ -41,6 +41,7 @@ func main() {
 	e.GET("/fetch", fetchUnread)
 	e.GET("/history/:channel_id", getHistory)
 	e.GET("/profile/:user_name", getProfile)
+	e.GET("/profile/:user_name/", getProfile)
 	e.GET("add_channel", getAddChannel)
 	// post
 	e.POST("/register", postRegister)
@@ -49,5 +50,6 @@ func main() {
 	e.POST("/profile", postProfile)
 	e.POST("add_channel", postAddChannel)
 	// start
+	setInitializeFunction()
 	e.Start(":5000")
 }
