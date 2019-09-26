@@ -2,6 +2,8 @@ package main
 
 import (
 	"html/template"
+	"log"
+	"net/http"
 
 	"github.com/gorilla/sessions"
 	"github.com/labstack/echo"
@@ -10,6 +12,9 @@ import (
 )
 
 func main() {
+	go func() {
+		log.Println(http.ListenAndServe("localhost:6060", nil))
+	}()
 	e := echo.New()
 	funcs := template.FuncMap{
 		"add":    tAdd,
