@@ -11,7 +11,7 @@ func viewshistoryhtml(w http.ResponseWriter, data map[string]interface{}) {
 	Messages := data["Messages"].([]map[string]interface{})
 	MaxPage := data["MaxPage"].(int64)
 	Page := data["Page"].(int64)
-	Me := data["User"].(User)
+	Me := data["User"].(*User)
 	w.WriteHeader(http.StatusOK)
 	w.Header()["Content-Type"] = []string{"text/html; charset=utf-8"}
 	// header
@@ -21,7 +21,7 @@ func viewshistoryhtml(w http.ResponseWriter, data map[string]interface{}) {
 		w.Write([]byte(strconv.Itoa(int(ChannelID))))
 		w.Write([]byte(`" class="nav-link">チャットログ</a></li> `))
 	}
-	if Me.ID != 0 {
+	if Me != nil {
 		w.Write([]byte(` <li class="nav-item"><a href="/add_channel" class="nav-link">チャンネル追加</a></li><li class="nav-item"><a href="/profile/`))
 		w.Write([]byte(Me.Name))
 		w.Write([]byte(`" class="nav-link">`))
@@ -31,7 +31,7 @@ func viewshistoryhtml(w http.ResponseWriter, data map[string]interface{}) {
 		w.Write([]byte(` <li><a href="/register" class="nav-link">新規登録</a></li><li><a href="/login" class="nav-link">ログイン</a></li> `))
 	}
 	w.Write([]byte(` </ul></div></nav><div class="container-fluid"><div class="row"><nav class="col-sm-3 col-md-3 hidden-xs-down bg-faded sidebar"> `))
-	if Me.ID != 0 {
+	if Me != nil {
 		w.Write([]byte(` <ul class="nav nav-pills flex-column"> `))
 		for _, ch := range Channels {
 			w.Write([]byte(` <li class="nav-item"><a class="nav-link justify-content-between `))
