@@ -2,9 +2,11 @@ package main
 
 import (
 	"database/sql"
+	"log"
 	"net/http"
+	"os"
+	"os/exec"
 	"strconv"
-	"strings"
 	"time"
 
 	"github.com/labstack/echo"
@@ -13,39 +15,37 @@ import (
 
 func getInitialize(c echo.Context) error {
 	db.MustExec("DELETE FROM user WHERE id > 1000")
-	db.MustExec("DELETE FROM image WHERE id > 1001")
 	db.MustExec("DELETE FROM channel WHERE id > 10")
 	db.MustExec("DELETE FROM message WHERE id > 10000")
 	db.MustExec("DELETE FROM haveread")
+	func() { // db.MustExec("DELETE FROM image WHERE id > 1001")
+		exec.Command("rm -rf /home/isucon/icons").Run()
+		exec.Command("mkdir /home/isucon/icons").Run()
+		// Image : ID(>1001 は消える.Nameで取得.)/Name/DATA
+		// ~/icons/ に保存されている。
+		// 5秒くらいだし毎回やる？
+		type Image struct {
+			ID   int64  `db:"id"`
+			Name string `db:"name"`
+			Data []byte `db:"data"`
+		}
+		images := []Image{}
+		err := db.Select(&images, "SELECT name, data FROM image WHERE ID <= 1001")
+		if err != nil {
+			panic(err)
+		}
+		for _, image := range images {
+			file, err := os.Create("/home/isucon/icons/" + image.Name)
+			if err != nil {
+				log.Panic(err)
+			}
+			file.Write(image.Data)
+			file.Close()
+		}
+	}()
 	return c.String(204, "")
 }
 
-func getIcon(c echo.Context) error {
-	var name string
-	var data []byte
-	// Image : ID/Name/DATA
-	err := db.QueryRow("SELECT name, data FROM image WHERE name = ?",
-		c.Param("file_name")).Scan(&name, &data)
-	if err == sql.ErrNoRows {
-		return echo.ErrNotFound
-	}
-	if err != nil {
-		return err
-	}
-
-	mime := ""
-	switch true {
-	case strings.HasSuffix(name, ".jpg"), strings.HasSuffix(name, ".jpeg"):
-		mime = "image/jpeg"
-	case strings.HasSuffix(name, ".png"):
-		mime = "image/png"
-	case strings.HasSuffix(name, ".gif"):
-		mime = "image/gif"
-	default:
-		return echo.ErrNotFound
-	}
-	return c.Blob(http.StatusOK, mime, data)
-}
 func fetchUnread(c echo.Context) error {
 	userID := sessUserID(c)
 	if userID == 0 {

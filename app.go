@@ -42,7 +42,6 @@ func main() {
 	e.GET("/history/:channel_id", getHistory)
 	e.GET("/profile/:user_name", getProfile)
 	e.GET("add_channel", getAddChannel)
-	e.GET("/icons/:file_name", getIcon)
 	// post
 	e.POST("/register", postRegister)
 	e.POST("/login", postLogin)
