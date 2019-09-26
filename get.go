@@ -1,7 +1,6 @@
 package main
 
 import (
-	"database/sql"
 	"log"
 	"net/http"
 	"os"
@@ -13,11 +12,45 @@ import (
 	"github.com/labstack/echo-contrib/session"
 )
 
+func setInitializeFunction() {
+	idToUserServer.server.InitializeFunction = func() {
+		log.Println("idToUserServer init")
+		users := []User{}
+		idToUserServerMap := map[string]interface{}{}
+		err := db.Select(&users, "SELECT * FROM `users`")
+		if err != nil {
+			panic(err)
+		}
+		for _, u := range users {
+			key := strconv.Itoa(int(u.ID))
+			idToUserServerMap[key] = u
+		}
+		idToUserServer.MSet(idToUserServerMap)
+	}
+	accountNameToIDServer.server.InitializeFunction = func() {
+		log.Println("accountNameToIDServer init")
+		users := []User{}
+		accountNametoIDServerMap := map[string]interface{}{}
+		err := db.Select(&users, "SELECT * FROM `users`")
+		if err != nil {
+			panic(err)
+		}
+		for _, u := range users {
+			key := strconv.Itoa(int(u.ID))
+			accountNametoIDServerMap[u.Name] = key
+		}
+		accountNameToIDServer.MSet(accountNametoIDServerMap)
+	}
+}
+
 func getInitialize(c echo.Context) error {
-	db.MustExec("DELETE FROM user WHERE id > 1000")
 	db.MustExec("DELETE FROM channel WHERE id > 10")
 	db.MustExec("DELETE FROM message WHERE id > 10000")
 	db.MustExec("DELETE FROM haveread")
+	func() { // db.MustExec("DELETE FROM user WHERE id > 1000")
+		accountNameToIDServer.Initialize()
+		idToUserServer.Initialize()
+	}()
 	func() { // db.MustExec("DELETE FROM image WHERE id > 1001")
 		exec.Command("rm -rf /home/isucon/icons").Run()
 		exec.Command("mkdir /home/isucon/icons").Run()
@@ -171,13 +204,15 @@ func getProfile(c echo.Context) error {
 	}
 
 	userName := c.Param("user_name")
-	var other User
-	err = db.Get(&other, "SELECT * FROM user WHERE name = ?", userName)
-	if err == sql.ErrNoRows {
+	idStr := ""
+	ok := accountNameToIDServer.Get(userName, &idStr)
+	if !ok {
 		return echo.ErrNotFound
 	}
-	if err != nil {
-		return err
+	var other User
+	ok = idToUserServer.Get(idStr, &other)
+	if !ok {
+		return echo.ErrNotFound
 	}
 
 	return c.Render(http.StatusOK, "profile", map[string]interface{}{

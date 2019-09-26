@@ -67,11 +67,9 @@ func init() {
 
 func getUser(userID int64) (*User, error) {
 	u := User{}
-	if err := db.Get(&u, "SELECT * FROM user WHERE id = ?", userID); err != nil {
-		if err == sql.ErrNoRows {
-			return nil, nil
-		}
-		return nil, err
+	ok := idToUserServer.Get(strconv.Itoa(int(userID)), &u)
+	if !ok {
+		return nil, sql.ErrNoRows
 	}
 	return &u, nil
 }
@@ -141,27 +139,27 @@ func randomString(n int) string {
 func register(name, password string) (int64, error) {
 	salt := randomString(20)
 	digest := fmt.Sprintf("%x", sha1.Sum([]byte(salt+password)))
-
-	res, err := db.Exec(
-		"INSERT INTO user (name, salt, password, display_name, avatar_icon, created_at)"+
-			" VALUES (?, ?, ?, ?, ?, NOW())",
-		name, salt, digest, name, "default.png")
-	if err != nil {
-		return 0, err
+	user := User{
+		Name:        name,
+		Salt:        salt,
+		Password:    digest,
+		DisplayName: name,
+		AvatarIcon:  "default.png",
+		CreatedAt:   time.Now().Truncate(time.Second),
 	}
-	return res.LastInsertId()
+	id := idToUserServer.Insert(user)
+	accountNameToIDServer.Set(name, strconv.Itoa(int(id)))
+	return int64(id), nil
 }
 
 // request handlers
 
 func jsonifyMessage(m Message) (map[string]interface{}, error) {
 	u := User{}
-	err := db.Get(&u, "SELECT name, display_name, avatar_icon FROM user WHERE id = ?",
-		m.UserID)
-	if err != nil {
-		return nil, err
+	ok := idToUserServer.Get(strconv.Itoa(int(m.UserID)), &u)
+	if !ok {
+		return nil, echo.ErrNotFound
 	}
-
 	r := make(map[string]interface{})
 	r["id"] = m.ID
 	r["user"] = u

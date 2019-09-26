@@ -49,5 +49,6 @@ func main() {
 	e.POST("/profile", postProfile)
 	e.POST("add_channel", postAddChannel)
 	// start
+	setInitializeFunction()
 	e.Start(":5000")
 }

@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/sha1"
-	"database/sql"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -76,7 +75,7 @@ func postProfile(c echo.Context) error {
 
 		avatarName = fmt.Sprintf("%x%s", sha1.Sum(avatarData), ext)
 	}
-
+	dirty := false
 	if avatarName != "" && len(avatarData) > 0 {
 		file, err := os.Create("/home/isucon/icons/" + avatarName)
 		if err != nil {
@@ -84,19 +83,16 @@ func postProfile(c echo.Context) error {
 		}
 		defer file.Close()
 		file.Write(avatarData)
-		_, err = db.Exec("UPDATE user SET avatar_icon = ? WHERE id = ?", avatarName, self.ID)
-		if err != nil {
-			return err
-		}
+		dirty = true
+		self.AvatarIcon = avatarName
 	}
-
 	if name := c.FormValue("display_name"); name != "" {
-		_, err := db.Exec("UPDATE user SET display_name = ? WHERE id = ?", name, self.ID)
-		if err != nil {
-			return err
-		}
+		dirty = true
+		self.DisplayName = name
 	}
-
+	if dirty {
+		idToUserServer.Set(strconv.Itoa(int(self.ID)), self)
+	}
 	return c.Redirect(http.StatusSeeOther, "/")
 }
 func postMessage(c echo.Context) error {
@@ -148,14 +144,13 @@ func postLogin(c echo.Context) error {
 		return ErrBadReqeust
 	}
 
-	var user User
-	err := db.Get(&user, "SELECT * FROM user WHERE name = ?", name)
-	if err == sql.ErrNoRows {
+	id := ""
+	ok := accountNameToIDServer.Get(name, &id)
+	if !ok {
 		return echo.ErrForbidden
-	} else if err != nil {
-		return err
 	}
-
+	user := User{}
+	idToUserServer.Get(id, &user)
 	digest := fmt.Sprintf("%x", sha1.Sum([]byte(user.Salt+pw)))
 	if digest != user.Password {
 		return echo.ErrForbidden

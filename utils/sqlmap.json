@@ -1,20 +1,5 @@
 {
-  user: {
-    getInitialize: [ 'DELETE FROM user WHERE id > 1000' ],
-    getProfile: [ 'SELECT * FROM user WHERE name = ?' ],
-    getUser: [ 'SELECT * FROM user WHERE id = ?' ],
-    register: [
-      'INSERT INTO user (name, salt, password, display_name, avatar_icon, created_at) VALUES (?, ?, ?, ?, ?, NOW())'
-    ],
-    jsonifyMessage: [ 'SELECT name, display_name, avatar_icon FROM user WHERE id = ?' ],
-    postProfile: [ 'UPDATE user SET avatar_icon = ? WHERE id = ?' ],
-    postLogin: [ 'SELECT * FROM user WHERE name = ?' ]
-  },
-  image: {
-    getInitialize: [ 'DELETE FROM image WHERE id > 1001' ],
-    getIcon: [ 'SELECT name, data FROM image WHERE name = ?' ],
-    postProfile: [ 'INSERT INTO image (name, data) VALUES (?, ?)' ]
-  },
+  users: { setInitializeFunction: [ 'SELECT * FROM `users`' ] },
   channel: {
     getInitialize: [ 'DELETE FROM channel WHERE id > 10' ],
     getHistory: [ 'SELECT * FROM channel ORDER BY id' ],
@@ -45,5 +30,8 @@
       'INSERT INTO haveread (user_id, channel_id, message_id, updated_at, created_at) VALUES (?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE message_id = ?, updated_at = NOW()'
     ],
     queryHaveRead: [ 'SELECT * FROM haveread WHERE user_id = ? AND channel_id = ?' ]
+  },
+  image: {
+    getInitialize: [ 'SELECT name, data FROM image WHERE ID <= 1001' ]
   }
 }
