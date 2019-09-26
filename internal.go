@@ -2,7 +2,6 @@ package main
 
 import (
 	crand "crypto/rand"
-	"crypto/sha1"
 	"database/sql"
 	"encoding/binary"
 	"fmt"
@@ -126,34 +125,7 @@ redirect:
 	return nil, nil
 }
 
-func randomString(n int) string {
-	b := make([]byte, n)
-	z := len(LettersAndDigits)
-
-	for i := 0; i < n; i++ {
-		b[i] = LettersAndDigits[rand.Intn(z)]
-	}
-	return string(b)
-}
-
-func register(name, password string) (int64, error) {
-	salt := randomString(20)
-	digest := fmt.Sprintf("%x", sha1.Sum([]byte(salt+password)))
-	user := User{
-		Name:        name,
-		Salt:        salt,
-		Password:    digest,
-		DisplayName: name,
-		AvatarIcon:  "default.png",
-		CreatedAt:   time.Now().Truncate(time.Second),
-	}
-	id := idToUserServer.Insert(user)
-	accountNameToIDServer.Set(name, strconv.Itoa(int(id)))
-	return int64(id), nil
-}
-
-// request handlers
-
+// TODO: 多分N+1
 func jsonifyMessage(m Message) (map[string]interface{}, error) {
 	u := User{}
 	ok := idToUserServer.Get(strconv.Itoa(int(m.UserID)), &u)

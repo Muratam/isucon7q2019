@@ -4,12 +4,14 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"io/ioutil"
+	"math/rand"
 	"net/http"
 	"os"
 	"strconv"
 	"strings"
+	"time"
 
-	"github.com/go-sql-driver/mysql"
+	_ "github.com/go-sql-driver/mysql"
 	"github.com/labstack/echo"
 )
 
@@ -125,14 +127,36 @@ func postRegister(c echo.Context) error {
 	if name == "" || pw == "" {
 		return ErrBadReqeust
 	}
+	randomString := func(n int) string {
+		b := make([]byte, n)
+		z := len(LettersAndDigits)
+
+		for i := 0; i < n; i++ {
+			b[i] = LettersAndDigits[rand.Intn(z)]
+		}
+		return string(b)
+	}
+	register := func(name, password string) (int64, error) {
+		if accountNameToIDServer.Exists(name) {
+			return 0, echo.ErrForbidden
+		}
+		salt := randomString(20)
+		digest := fmt.Sprintf("%x", sha1.Sum([]byte(salt+password)))
+		user := User{
+			Name:        name,
+			Salt:        salt,
+			Password:    digest,
+			DisplayName: name,
+			AvatarIcon:  "default.png",
+			CreatedAt:   time.Now().Truncate(time.Second),
+		}
+		id := idToUserServer.Insert(user)
+		accountNameToIDServer.Set(name, strconv.Itoa(int(id)))
+		return int64(id), nil
+	}
 	userID, err := register(name, pw)
 	if err != nil {
-		if merr, ok := err.(*mysql.MySQLError); ok {
-			if merr.Number == 1062 { // Duplicate entry xxxx for key zzzz
-				return c.NoContent(http.StatusConflict)
-			}
-		}
-		return err
+		return c.NoContent(http.StatusConflict)
 	}
 	sessSetUserID(c, userID)
 	return c.Redirect(http.StatusSeeOther, "/")
