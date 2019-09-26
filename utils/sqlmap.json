@@ -1,42 +1,42 @@
 {
   user: {
+    getInitialize: [ 'DELETE FROM user WHERE id > 1000' ],
+    getProfile: [ 'SELECT * FROM user WHERE name = ?' ],
     getUser: [ 'SELECT * FROM user WHERE id = ?' ],
     register: [
       'INSERT INTO user (name, salt, password, display_name, avatar_icon, created_at) VALUES (?, ?, ?, ?, ?, NOW())'
     ],
-    getInitialize: [ 'DELETE FROM user WHERE id > 1000' ],
-    postLogin: [ 'SELECT * FROM user WHERE name = ?' ],
     jsonifyMessage: [ 'SELECT name, display_name, avatar_icon FROM user WHERE id = ?' ],
-    getProfile: [ 'SELECT * FROM user WHERE name = ?' ],
-    postProfile: [ 'UPDATE user SET avatar_icon = ? WHERE id = ?' ]
+    postProfile: [ 'UPDATE user SET avatar_icon = ? WHERE id = ?' ],
+    postLogin: [ 'SELECT * FROM user WHERE name = ?' ]
+  },
+  image: {
+    getInitialize: [ 'DELETE FROM image WHERE id > 1001' ],
+    getIcon: [ 'SELECT name, data FROM image WHERE name = ?' ],
+    postProfile: [ 'INSERT INTO image (name, data) VALUES (?, ?)' ]
+  },
+  channel: {
+    getInitialize: [ 'DELETE FROM channel WHERE id > 10' ],
+    getHistory: [ 'SELECT * FROM channel ORDER BY id' ],
+    getProfile: [ 'SELECT * FROM channel ORDER BY id' ],
+    getAddChannel: [ 'SELECT * FROM channel ORDER BY id' ],
+    getChannel: [ 'SELECT * FROM channel ORDER BY id' ],
+    queryChannels: [ 'SELECT id FROM channel' ],
+    postAddChannel: [
+      'INSERT INTO channel (name, description, updated_at, created_at) VALUES (?, ?, NOW(), NOW())'
+    ]
   },
   message: {
-    addMessage: [
-      'INSERT INTO message (channel_id, user_id, content, created_at) VALUES (?, ?, ?, NOW())'
-    ],
-    queryMessages: [
-      'SELECT * FROM message WHERE id > ? AND channel_id = ? ORDER BY id DESC LIMIT 100'
-    ],
     getInitialize: [ 'DELETE FROM message WHERE id > 10000' ],
     fetchUnread: [
       'SELECT COUNT(*) as cnt FROM message WHERE channel_id = ? AND ? < id'
     ],
-    getHistory: [ 'SELECT COUNT(*) as cnt FROM message WHERE channel_id = ?' ]
-  },
-  image: {
-    getInitialize: [ 'DELETE FROM image WHERE id > 1001' ],
-    postProfile: [ 'INSERT INTO image (name, data) VALUES (?, ?)' ],
-    getIcon: [ 'SELECT name, data FROM image WHERE name = ?' ]
-  },
-  channel: {
-    getInitialize: [ 'DELETE FROM channel WHERE id > 10' ],
-    getChannel: [ 'SELECT * FROM channel ORDER BY id' ],
-    queryChannels: [ 'SELECT id FROM channel' ],
-    getHistory: [ 'SELECT * FROM channel ORDER BY id' ],
-    getProfile: [ 'SELECT * FROM channel ORDER BY id' ],
-    getAddChannel: [ 'SELECT * FROM channel ORDER BY id' ],
-    postAddChannel: [
-      'INSERT INTO channel (name, description, updated_at, created_at) VALUES (?, ?, NOW(), NOW())'
+    getHistory: [ 'SELECT COUNT(*) as cnt FROM message WHERE channel_id = ?' ],
+    queryMessages: [
+      'SELECT * FROM message WHERE id > ? AND channel_id = ? ORDER BY id DESC LIMIT 100'
+    ],
+    addMessage: [
+      'INSERT INTO message (channel_id, user_id, content, created_at) VALUES (?, ?, ?, NOW())'
     ]
   },
   haveread: {
