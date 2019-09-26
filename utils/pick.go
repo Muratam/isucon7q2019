@@ -34,7 +34,7 @@ func pick() {
 	}
 	// Image : ID(>1001 は消える.Nameで取得.)/Name/DATA
 	images := []Image{}
-	err = db.Select(&images, "SELECT name, data FROM image")
+	err = db.Select(&images, "SELECT name, data FROM image WHERE ID <= 1001")
 	if err != nil {
 		panic(err)
 	}
