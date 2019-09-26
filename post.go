@@ -2,7 +2,6 @@ package main
 
 import (
 	"crypto/sha1"
-	"database/sql"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -148,7 +147,7 @@ func postLogin(c echo.Context) error {
 	id := ""
 	ok := accountNameToIDServer.Get(name, &id)
 	if !ok {
-		return sql.ErrNoRows
+		return echo.ErrForbidden
 	}
 	user := User{}
 	idToUserServer.Get(id, &user)
