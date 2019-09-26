@@ -4,6 +4,7 @@ import (
 	"html/template"
 	"log"
 	"net/http"
+	_ "net/http/pprof"
 
 	"github.com/gorilla/sessions"
 	"github.com/labstack/echo"
