@@ -51,6 +51,7 @@ func viewshistoryhtml(w http.ResponseWriter, data map[string]interface{}) {
 	w.Write([]byte(` </nav><main class="col-sm-9 offset-sm-3 col-md-9 offset-md-3 pt-3"> `))
 	// --------
 	w.Write([]byte(` <div id="history"> `))
+
 	for _, message := range Messages {
 		user := message["user"].(User)
 		w.Write([]byte(` <div class="media message"><img class="avatar d-flex align-self-start mr-3" src="/icons/`))
@@ -68,15 +69,15 @@ func viewshistoryhtml(w http.ResponseWriter, data map[string]interface{}) {
 		w.Write([]byte(`</p></div></div> `))
 	}
 	w.Write([]byte(` </div><nav><ul class="pagination"> `))
-	if Page != 1 { // WARN:
+	if Page != 1 {
 		w.Write([]byte(` <li><a href="/history/`))
 		w.Write([]byte(strconv.Itoa(int(ChannelID))))
 		w.Write([]byte(`?page=`))
 		w.Write([]byte(strconv.Itoa(int(Page - 1))))
 		w.Write([]byte(`"><span>«</span></a></li> `))
 	}
-	for p := int64(1); p < MaxPage; p++ { // WARN:
-		if p != Page { // WARN:
+	for _, p := range tRange(1, MaxPage) { // WARN:
+		if p == Page {
 			w.Write([]byte(`<li class="active">`))
 		} else {
 			w.Write([]byte(`<li>`))
