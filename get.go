@@ -13,11 +13,11 @@ import (
 )
 
 func setInitializeFunction() {
-	idToUserServer.server.InitializeFunction = func() {
+	idToUserServer.server.InitializeFunction = func() { // db.MustExec("DELETE FROM user WHERE id > 1000")
 		log.Println("idToUserServer init")
 		users := []User{}
 		idToUserServerMap := map[string]interface{}{}
-		err := db.Select(&users, "SELECT * FROM user")
+		err := db.Select(&users, "SELECT * FROM user WHERE id <= 1000")
 		if err != nil {
 			panic(err)
 		}
@@ -31,7 +31,7 @@ func setInitializeFunction() {
 		log.Println("accountNameToIDServer init")
 		users := []User{}
 		accountNametoIDServerMap := map[string]interface{}{}
-		err := db.Select(&users, "SELECT * FROM user")
+		err := db.Select(&users, "SELECT * FROM user WHERE id <= 1000")
 		if err != nil {
 			panic(err)
 		}
@@ -47,7 +47,7 @@ func getInitialize(c echo.Context) error {
 	db.MustExec("DELETE FROM channel WHERE id > 10")
 	db.MustExec("DELETE FROM message WHERE id > 10000")
 	db.MustExec("DELETE FROM haveread")
-	func() { // db.MustExec("DELETE FROM user WHERE id > 1000")
+	func() {
 		accountNameToIDServer.Initialize()
 		idToUserServer.Initialize()
 	}()
