@@ -1,0 +1,190 @@
+
+    digraph  {
+      layout = "dot";
+      // overlap = false;
+      // splines = true;
+      node[
+        // landscape = true,
+        width = 0.2,
+        height = 0.2,
+        fontname = "Helvetica",
+        style = "filled",
+        fillcolor = "#fafafa",
+        shape = box,
+        style = "filled, bold, rounded"
+      ];
+      edge[
+        len = 0.1,
+        fontsize = "8",
+        fontname = "Helvetica",
+        style = "dashed",
+    ];
+      getUser -> ensureLogin; 
+ensureLogin[label="ensure
+Login"];
+getUser[label="get
+User"];
+ensureLogin -> getChannel; 
+getChannel[label="get
+Channel"];
+ensureLogin[label="ensure
+Login"];
+register -> postRegister; 
+postRegister[label="post
+Register"];
+register[label="register"];
+ensureLogin -> postMessage; 
+postMessage[label="post
+Message"];
+ensureLogin[label="ensure
+Login"];
+addMessage -> postMessage; 
+postMessage[label="post
+Message"];
+addMessage[label="add
+Message"];
+queryMessages -> getMessage; 
+getMessage[label="get
+Message"];
+queryMessages[label="query
+Messages"];
+jsonifyMessage -> getMessage; 
+getMessage[label="get
+Message"];
+jsonifyMessage[label="jsonify
+Message"];
+queryChannels -> fetchUnread; 
+fetchUnread[label="fetch
+Unread"];
+queryChannels[label="query
+Channels"];
+queryHaveRead -> fetchUnread; 
+fetchUnread[label="fetch
+Unread"];
+queryHaveRead[label="query
+Have
+Read"];
+ensureLogin -> getHistory; 
+getHistory[label="get
+History"];
+ensureLogin[label="ensure
+Login"];
+jsonifyMessage -> getHistory; 
+getHistory[label="get
+History"];
+jsonifyMessage[label="jsonify
+Message"];
+ensureLogin -> getProfile; 
+getProfile[label="get
+Profile"];
+ensureLogin[label="ensure
+Login"];
+ensureLogin -> getAddChannel; 
+getAddChannel[label="get
+Add
+Channel"];
+ensureLogin[label="ensure
+Login"];
+ensureLogin -> postAddChannel; 
+postAddChannel[label="post
+Add
+Channel"];
+ensureLogin[label="ensure
+Login"];
+ensureLogin -> postProfile; 
+postProfile[label="post
+Profile"];
+ensureLogin[label="ensure
+Login"];
+
+      user -> getUser[style="bold"];
+user[label="user",shape=box, style="filled, bold, rounded", fillcolor="#ffffcc"];
+getUser[label="get
+User"];
+addMessage -> message[style="bold",label="INSERT",color="#f08060",fontcolor="#f08060"];
+message[label="message",shape=box, style="filled, bold, rounded", fillcolor="#ffffcc"];
+addMessage[label="add
+Message"];
+message -> queryMessages[style="bold"];
+message[label="message",shape=box, style="filled, bold, rounded", fillcolor="#ffffcc"];
+queryMessages[label="query
+Messages"];
+register -> user[style="bold",label="INSERT",color="#f08060",fontcolor="#f08060"];
+user[label="user",shape=box, style="filled, bold, rounded", fillcolor="#ffffcc"];
+register[label="register"];
+getInitialize -> user[style="bold",label="DELETE",color="#f08060",fontcolor="#f08060"];
+user[label="user",shape=box, style="filled, bold, rounded", fillcolor="#ffffcc"];
+getInitialize -> image[style="bold",label="DELETE",color="#f08060",fontcolor="#f08060"];
+image[label="image",shape=box, style="filled, bold, rounded", fillcolor="#ffffcc"];
+getInitialize -> channel[style="bold",label="DELETE",color="#f08060",fontcolor="#f08060"];
+channel[label="channel",shape=box, style="filled, bold, rounded", fillcolor="#ffffcc"];
+getInitialize -> message[style="bold",label="DELETE",color="#f08060",fontcolor="#f08060"];
+message[label="message",shape=box, style="filled, bold, rounded", fillcolor="#ffffcc"];
+getInitialize -> haveread[style="bold",label="DELETE",color="#f08060",fontcolor="#f08060"];
+haveread[label="haveread",shape=box, style="filled, bold, rounded", fillcolor="#ffffcc"];
+getInitialize[label="get
+Initialize"];
+channel -> getChannel[style="bold"];
+channel[label="channel",shape=box, style="filled, bold, rounded", fillcolor="#ffffcc"];
+getChannel[label="get
+Channel"];
+user -> postLogin[style="bold"];
+user[label="user",shape=box, style="filled, bold, rounded", fillcolor="#ffffcc"];
+postLogin[label="post
+Login"];
+user -> jsonifyMessage[style="bold"];
+user[label="user",shape=box, style="filled, bold, rounded", fillcolor="#ffffcc"];
+jsonifyMessage[label="jsonify
+Message"];
+getMessage -> haveread[style="bold",label="INSERT",color="#f08060",fontcolor="#f08060"];
+haveread[label="haveread",shape=box, style="filled, bold, rounded", fillcolor="#ffffcc"];
+getMessage[label="get
+Message"];
+channel -> queryChannels[style="bold"];
+channel[label="channel",shape=box, style="filled, bold, rounded", fillcolor="#ffffcc"];
+queryChannels[label="query
+Channels"];
+haveread -> queryHaveRead[style="bold"];
+haveread[label="haveread",shape=box, style="filled, bold, rounded", fillcolor="#ffffcc"];
+queryHaveRead[label="query
+Have
+Read"];
+message -> fetchUnread[style="bold"];
+message[label="message",shape=box, style="filled, bold, rounded", fillcolor="#ffffcc"];
+fetchUnread[label="fetch
+Unread"];
+message -> getHistory[style="bold"];
+message[label="message",shape=box, style="filled, bold, rounded", fillcolor="#ffffcc"];
+channel -> getHistory[style="bold"];
+channel[label="channel",shape=box, style="filled, bold, rounded", fillcolor="#ffffcc"];
+getHistory[label="get
+History"];
+channel -> getProfile[style="bold"];
+channel[label="channel",shape=box, style="filled, bold, rounded", fillcolor="#ffffcc"];
+user -> getProfile[style="bold"];
+user[label="user",shape=box, style="filled, bold, rounded", fillcolor="#ffffcc"];
+getProfile[label="get
+Profile"];
+channel -> getAddChannel[style="bold"];
+channel[label="channel",shape=box, style="filled, bold, rounded", fillcolor="#ffffcc"];
+getAddChannel[label="get
+Add
+Channel"];
+postAddChannel -> channel[style="bold",label="INSERT",color="#f08060",fontcolor="#f08060"];
+channel[label="channel",shape=box, style="filled, bold, rounded", fillcolor="#ffffcc"];
+postAddChannel[label="post
+Add
+Channel"];
+postProfile -> image[style="bold",label="INSERT",color="#f08060",fontcolor="#f08060"];
+image[label="image",shape=box, style="filled, bold, rounded", fillcolor="#ffffcc"];
+postProfile -> user[style="bold",label="UPDATE",color="#f08060",fontcolor="#f08060"];
+user[label="user",shape=box, style="filled, bold, rounded", fillcolor="#ffffcc"];
+postProfile[label="post
+Profile"];
+image -> getIcon[style="bold"];
+image[label="image",shape=box, style="filled, bold, rounded", fillcolor="#ffffcc"];
+getIcon[label="get
+Icon"];
+
+    }
+    

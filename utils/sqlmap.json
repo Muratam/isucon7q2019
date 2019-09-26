@@ -1,0 +1,49 @@
+{
+  user: {
+    getUser: [ 'SELECT * FROM user WHERE id = ?' ],
+    register: [
+      'INSERT INTO user (name, salt, password, display_name, avatar_icon, created_at) VALUES (?, ?, ?, ?, ?, NOW())'
+    ],
+    getInitialize: [ 'DELETE FROM user WHERE id > 1000' ],
+    postLogin: [ 'SELECT * FROM user WHERE name = ?' ],
+    jsonifyMessage: [ 'SELECT name, display_name, avatar_icon FROM user WHERE id = ?' ],
+    getProfile: [ 'SELECT * FROM user WHERE name = ?' ],
+    postProfile: [ 'UPDATE user SET avatar_icon = ? WHERE id = ?' ]
+  },
+  message: {
+    addMessage: [
+      'INSERT INTO message (channel_id, user_id, content, created_at) VALUES (?, ?, ?, NOW())'
+    ],
+    queryMessages: [
+      'SELECT * FROM message WHERE id > ? AND channel_id = ? ORDER BY id DESC LIMIT 100'
+    ],
+    getInitialize: [ 'DELETE FROM message WHERE id > 10000' ],
+    fetchUnread: [
+      'SELECT COUNT(*) as cnt FROM message WHERE channel_id = ? AND ? < id'
+    ],
+    getHistory: [ 'SELECT COUNT(*) as cnt FROM message WHERE channel_id = ?' ]
+  },
+  image: {
+    getInitialize: [ 'DELETE FROM image WHERE id > 1001' ],
+    postProfile: [ 'INSERT INTO image (name, data) VALUES (?, ?)' ],
+    getIcon: [ 'SELECT name, data FROM image WHERE name = ?' ]
+  },
+  channel: {
+    getInitialize: [ 'DELETE FROM channel WHERE id > 10' ],
+    getChannel: [ 'SELECT * FROM channel ORDER BY id' ],
+    queryChannels: [ 'SELECT id FROM channel' ],
+    getHistory: [ 'SELECT * FROM channel ORDER BY id' ],
+    getProfile: [ 'SELECT * FROM channel ORDER BY id' ],
+    getAddChannel: [ 'SELECT * FROM channel ORDER BY id' ],
+    postAddChannel: [
+      'INSERT INTO channel (name, description, updated_at, created_at) VALUES (?, ?, NOW(), NOW())'
+    ]
+  },
+  haveread: {
+    getInitialize: [ 'DELETE FROM haveread' ],
+    getMessage: [
+      'INSERT INTO haveread (user_id, channel_id, message_id, updated_at, created_at) VALUES (?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE message_id = ?, updated_at = NOW()'
+    ],
+    queryHaveRead: [ 'SELECT * FROM haveread WHERE user_id = ? AND channel_id = ?' ]
+  }
+}
