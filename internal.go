@@ -105,7 +105,8 @@ func ensureLogin(c echo.Context) (*User, error) {
 
 	userID := sessUserID(c)
 	if userID == 0 {
-		goto redirect
+		c.Redirect(http.StatusSeeOther, "/login")
+		return nil, nil
 	}
 
 	user, err = getUser(userID)
@@ -116,13 +117,11 @@ func ensureLogin(c echo.Context) (*User, error) {
 		sess, _ := session.Get("session", c)
 		delete(sess.Values, "user_id")
 		sess.Save(c.Request(), c.Response())
-		goto redirect
+		c.Redirect(http.StatusSeeOther, "/login")
+		return nil, nil
 	}
 	return user, nil
 
-redirect:
-	c.Redirect(http.StatusSeeOther, "/login")
-	return nil, nil
 }
 
 // TODO: 多分N+1

@@ -4,7 +4,6 @@ import (
 	"crypto/sha1"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"math/rand"
 	"net/http"
 	"os"
@@ -144,6 +143,7 @@ func postRegister(c echo.Context) error {
 		salt := randomString(20)
 		digest := fmt.Sprintf("%x", sha1.Sum([]byte(salt+password)))
 		user := User{
+			ID:          -1,
 			Name:        name,
 			Salt:        salt,
 			Password:    digest,
@@ -152,8 +152,10 @@ func postRegister(c echo.Context) error {
 			CreatedAt:   time.Now().Truncate(time.Second),
 		}
 		id := idToUserServer.Insert(user)
-		accountNameToIDServer.Set(name, strconv.Itoa(int(id)))
-		log.Println("INSERT:", name, ":", id)
+		idStr := strconv.Itoa(int(id))
+		user.ID = int64(id)
+		idToUserServer.Set(idStr, user)
+		accountNameToIDServer.Set(name, idStr)
 		return int64(id), nil
 	}
 	userID, err := register(name, pw)
