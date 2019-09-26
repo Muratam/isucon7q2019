@@ -180,8 +180,7 @@ func getHistory(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-
-	return c.Render(http.StatusOK, "history", map[string]interface{}{
+	viewshistoryhtml(c.Response(), map[string]interface{}{
 		"ChannelID": chID,
 		"Channels":  channels,
 		"Messages":  mjson,
@@ -189,6 +188,7 @@ func getHistory(c echo.Context) error {
 		"Page":      page,
 		"User":      user,
 	})
+	return nil
 }
 
 func getProfile(c echo.Context) error {
