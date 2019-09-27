@@ -73,13 +73,6 @@ func getUser(userID int64) (*User, error) {
 	return &u, nil
 }
 
-func queryMessages(chanID, lastID int64) ([]Message, error) {
-	msgs := []Message{}
-	err := db.Select(&msgs, "SELECT * FROM message WHERE id > ? AND channel_id = ? ORDER BY id DESC LIMIT 100",
-		lastID, chanID)
-	return msgs, err
-}
-
 func sessUserID(c echo.Context) int64 {
 	sess, _ := session.Get("session", c)
 	var userID int64
@@ -138,7 +131,6 @@ func jsonifyMessage(m Message) (map[string]interface{}, error) {
 	r["content"] = m.Content
 	return r, nil
 }
-
 func getMessage(c echo.Context) error {
 	userID := sessUserID(c)
 	if userID == 0 {
@@ -154,7 +146,10 @@ func getMessage(c echo.Context) error {
 		return err
 	}
 
-	messages, err := queryMessages(chanID, lastID)
+	messages := []Message{}
+	err = db.Select(&messages,
+		"SELECT * FROM message WHERE id > ? AND channel_id = ? ORDER BY id DESC LIMIT 100",
+		lastID, chanID)
 	if err != nil {
 		return err
 	}
@@ -188,15 +183,6 @@ func getMessage(c echo.Context) error {
 	return c.JSON(http.StatusOK, response)
 }
 
-func addMessage(channelID, userID int64, content string) (int64, error) {
-	res, err := db.Exec(
-		"INSERT INTO message (channel_id, user_id, content, created_at) VALUES (?, ?, ?, NOW())",
-		channelID, userID, content)
-	if err != nil {
-		return 0, err
-	}
-	return res.LastInsertId()
-}
 func tAdd(a, b int64) int64 {
 	return a + b
 }

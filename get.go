@@ -38,6 +38,18 @@ func setInitializeFunction() {
 		}
 		accountNameToIDServer.MSet(accountNametoIDServerMap)
 	}
+	channelIdToMessageCountServer.server.InitializeFunction = func() {
+		idAndCounts := []IdAndCount{} // db.MustExec("DELETE FROM message WHERE id > 10000")
+		err := db.Select(&idAndCounts, "SELECT channel_id,COUNT(*) as cnt FROM message WHERE id <= 10000 GROUP BY channel_id")
+		if err != nil {
+			panic(err)
+		}
+		idToCountMap := map[string]interface{}{}
+		for _, ic := range idAndCounts {
+			idToCountMap[strconv.Itoa(int(ic.ChannelID))] = int(ic.Count)
+		}
+		channelIdToMessageCountServer.MSet(idToCountMap)
+	}
 }
 
 func getInitialize(c echo.Context) error {
@@ -48,6 +60,7 @@ func getInitialize(c echo.Context) error {
 		userIdToLastReadServer.FlushAll()
 		accountNameToIDServer.Initialize()
 		idToUserServer.Initialize()
+		channelIdToMessageCountServer.Initialize()
 	}()
 	func() { // db.MustExec("DELETE FROM image WHERE id > 1001")
 		exec.Command("rm -rf /home/isucon/icons").Run()
@@ -87,20 +100,11 @@ func fetchUnread(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-	type IdAndCount struct {
-		ChannelID int64 `db:"channel_id"`
-		Count     int64 `db:"cnt"`
+	channelIdStrs := make([]string, len(channels))
+	for i, cid := range channels {
+		channelIdStrs[i] = strconv.Itoa(int(cid))
 	}
-	idAndCounts := []IdAndCount{}
-	err = db.Select(&idAndCounts, "SELECT channel_id,COUNT(*) as cnt FROM message GROUP BY channel_id")
-	if err != nil {
-		return err
-	}
-	idToCountMap := map[int64]int64{}
-	for _, ic := range idAndCounts {
-		idToCountMap[ic.ChannelID] = ic.Count
-	}
-
+	mGot := channelIdToMessageCountServer.MGet(channelIdStrs)
 	preLastReads := map[int64]int64{}
 	userIDStr := strconv.Itoa(int(userID))
 	userIdToLastReadServer.Get(userIDStr, &preLastReads)
@@ -110,13 +114,14 @@ func fetchUnread(c echo.Context) error {
 		if !ok {
 			read = 0
 		}
-		cnt, ok := idToCountMap[chID]
+		cnt := 0
+		ok = mGot.Get(strconv.Itoa(int(chID)), &cnt)
 		if !ok {
 			cnt = 0
 		}
 		resp[i] = map[string]interface{}{
 			"channel_id": chID,
-			"unread":     cnt - read,
+			"unread":     int64(cnt) - read,
 		}
 	}
 
@@ -146,11 +151,12 @@ func getHistory(c echo.Context) error {
 	}
 
 	const N = 20
-	var cnt int64
-	err = db.Get(&cnt, "SELECT COUNT(*) as cnt FROM message WHERE channel_id = ?", chID)
-	if err != nil {
-		return err
+	var cnti int
+	ok := channelIdToMessageCountServer.Get(strconv.Itoa(int(chID)), &cnti)
+	if !ok {
+		cnti = 0
 	}
+	cnt := int64(cnti)
 	maxPage := int64(cnt+N-1) / N
 	if maxPage == 0 {
 		maxPage = 1

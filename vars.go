@@ -20,3 +20,6 @@ var isMasterServerIP = MyServerIsOnMasterServerIP()
 var accountNameToIDServer = NewSyncMapServerConn(GetMasterServerAddress()+":8885", isMasterServerIP)
 var idToUserServer = NewSyncMapServerConn(GetMasterServerAddress()+":8884", isMasterServerIP)
 var userIdToLastReadServer = NewSyncMapServerConn(GetMasterServerAddress()+":8883", isMasterServerIP)
+
+// int
+var channelIdToMessageCountServer = NewSyncMapServerConn(GetMasterServerAddress()+":8882", isMasterServerIP)
