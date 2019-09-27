@@ -34,6 +34,7 @@ func postAddChannel(c echo.Context) error {
 		return err
 	}
 	lastID, _ := res.LastInsertId()
+	channelIdToMessageCountServer.Set(strconv.Itoa(int(lastID)), 0)
 	return c.Redirect(http.StatusSeeOther,
 		fmt.Sprintf("/channel/%v", lastID))
 }
@@ -97,6 +98,7 @@ func postProfile(c echo.Context) error {
 	}
 	return c.Redirect(http.StatusSeeOther, "/")
 }
+
 func postMessage(c echo.Context) error {
 	user, err := ensureLogin(c)
 	if user == nil {
@@ -114,11 +116,13 @@ func postMessage(c echo.Context) error {
 	} else {
 		chanID = int64(x)
 	}
-
-	if _, err := addMessage(chanID, user.ID, message); err != nil {
+	_, err = db.Exec(
+		"INSERT INTO message (channel_id, user_id, content, created_at) VALUES (?, ?, ?, NOW())",
+		chanID, user.ID, message)
+	channelIdToMessageCountServer.IncrBy(strconv.Itoa(int(chanID)), 1)
+	if err != nil {
 		return err
 	}
-
 	return c.NoContent(204)
 }
 func postRegister(c echo.Context) error {
