@@ -174,7 +174,14 @@ func getMessage(c echo.Context) error {
 		preLastReads := map[int64]int64{}
 		userIDStr := strconv.Itoa(int(userID))
 		userIdToLastReadServer.Get(userIDStr, &preLastReads)
-		preLastReads[chanID] = messages[0].ID
+		var cnt int64
+		// 読んだ個数を記録
+		err = db.Get(&cnt, "SELECT COUNT(*) FROM message WHERE channel_id = ? AND id <= ?",
+			chanID, messages[0].ID)
+		if err != nil {
+			return err
+		}
+		preLastReads[chanID] = cnt
 		userIdToLastReadServer.Set(userIDStr, preLastReads)
 	}
 

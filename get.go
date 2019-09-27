@@ -6,7 +6,6 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
-	"time"
 
 	"github.com/labstack/echo"
 	"github.com/labstack/echo-contrib/session"
@@ -83,32 +82,41 @@ func fetchUnread(c echo.Context) error {
 	if userID == 0 {
 		return c.NoContent(http.StatusForbidden)
 	}
-	// TODO: 未読
-	time.Sleep(time.Second)
 	channels := []int64{}
 	err := db.Select(&channels, "SELECT id FROM channel")
 	if err != nil {
 		return err
 	}
+	type IdAndCount struct {
+		ChannelID int64 `db:"channel_id"`
+		Count     int64 `db:"cnt"`
+	}
+	idAndCounts := []IdAndCount{}
+	err = db.Select(&idAndCounts, "SELECT channel_id,COUNT(*) as cnt FROM message GROUP BY channel_id")
+	if err != nil {
+		return err
+	}
+	idToCountMap := map[int64]int64{}
+	for _, ic := range idAndCounts {
+		idToCountMap[ic.ChannelID] = ic.Count
+	}
+
 	preLastReads := map[int64]int64{}
 	userIDStr := strconv.Itoa(int(userID))
 	userIdToLastReadServer.Get(userIDStr, &preLastReads)
 	resp := make([]map[string]interface{}, len(channels))
 	for i, chID := range channels {
-		lastID, ok := preLastReads[chID]
+		read, ok := preLastReads[chID]
 		if !ok {
-			lastID = 0
+			read = 0
 		}
-		var cnt int64
-		err = db.Get(&cnt,
-			"SELECT COUNT(*) as cnt FROM message WHERE channel_id = ? AND ? < id",
-			chID, lastID)
-		if err != nil {
-			return err
+		cnt, ok := idToCountMap[chID]
+		if !ok {
+			cnt = 0
 		}
 		resp[i] = map[string]interface{}{
 			"channel_id": chID,
-			"unread":     cnt,
+			"unread":     cnt - read,
 		}
 	}
 

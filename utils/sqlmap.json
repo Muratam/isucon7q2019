@@ -2,11 +2,11 @@
   user: { setInitializeFunction: [ 'SELECT * FROM user WHERE id <= 1000' ] },
   channel: {
     getInitialize: [ 'DELETE FROM channel WHERE id > 10' ],
+    fetchUnread: [ 'SELECT id FROM channel' ],
     getHistory: [ 'SELECT * FROM channel ORDER BY id' ],
     getProfile: [ 'SELECT * FROM channel ORDER BY id' ],
     getAddChannel: [ 'SELECT * FROM channel ORDER BY id' ],
     getChannel: [ 'SELECT * FROM channel ORDER BY id' ],
-    queryChannels: [ 'SELECT id FROM channel' ],
     postAddChannel: [
       'INSERT INTO channel (name, description, updated_at, created_at) VALUES (?, ?, NOW(), NOW())'
     ]
@@ -23,13 +23,6 @@
     addMessage: [
       'INSERT INTO message (channel_id, user_id, content, created_at) VALUES (?, ?, ?, NOW())'
     ]
-  },
-  haveread: {
-    getInitialize: [ 'DELETE FROM haveread' ],
-    getMessage: [
-      'INSERT INTO haveread (user_id, channel_id, message_id, updated_at, created_at) VALUES (?, ?, ?, NOW(), NOW()) ON DUPLICATE KEY UPDATE message_id = ?, updated_at = NOW()'
-    ],
-    queryHaveRead: [ 'SELECT * FROM haveread WHERE user_id = ? AND channel_id = ?' ]
   },
   image: {
     getInitialize: [ 'SELECT name, data FROM image WHERE ID <= 1001' ]
