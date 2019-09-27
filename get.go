@@ -46,23 +46,28 @@ func setInitializeFunction() {
 		if err != nil {
 			panic(err)
 		}
-		localMap := map[string]interface{}{}
+		localMap := map[string][]Message{}
 		for i := 1; i <= 10; i++ {
 			localMap[strconv.Itoa(i)] = []Message{}
 		}
 		for i := 2711; i <= 2900; i++ {
 			localMap[strconv.Itoa(i)] = []Message{}
 		}
-
 		for _, msg := range messages {
 			key := strconv.Itoa(int(msg.ChannelID))
 			if val, ok := localMap[key]; ok {
-				localMap[key] = append(val.([]Message), msg)
+				localMap[key] = append(val, msg)
 			} else {
 				localMap[key] = []Message{msg}
 			}
 		}
-		channelIdToMessagesServer.MSet(localMap)
+		for k, v := range localMap {
+			arr := make([]interface{}, len(v))
+			for i, vv := range v {
+				arr[i] = vv
+			}
+			channelIdToMessagesServer.RPush(k, arr...)
+		}
 	}
 	messageNumServer.server.InitializeFunction = func() {
 		messageNumServer.Set("cnt", 10000)
