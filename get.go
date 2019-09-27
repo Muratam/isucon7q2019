@@ -46,6 +46,12 @@ func setInitializeFunction() {
 			panic(err)
 		}
 		idToCountMap := map[string]interface{}{}
+		for i := 1; i <= 10; i++ {
+			idToCountMap[strconv.Itoa(i)] = 0
+		}
+		for i := 2711; i <= 2900; i++ {
+			idToCountMap[strconv.Itoa(i)] = 0
+		}
 		for _, ic := range idAndCounts {
 			idToCountMap[strconv.Itoa(int(ic.ChannelID))] = int(ic.Count)
 		}
@@ -99,15 +105,7 @@ func fetchUnread(c echo.Context) error {
 	if userID == 0 {
 		return c.NoContent(http.StatusForbidden)
 	}
-	channels := []int64{}
-	err := db.Select(&channels, "SELECT id FROM channel")
-	if err != nil {
-		return err
-	}
-	channelIdStrs := make([]string, len(channels))
-	for i, cid := range channels {
-		channelIdStrs[i] = strconv.Itoa(int(cid))
-	}
+	channelIdStrs := channelIdToMessageCountServer.AllKeys()
 	mGot := channelIdToMessageCountServer.MGet(channelIdStrs)
 	preLastReads := map[int64]int64{}
 	userIDStr := strconv.Itoa(int(userID))
@@ -115,7 +113,9 @@ func fetchUnread(c echo.Context) error {
 	c.Response().WriteHeader(http.StatusOK)
 	c.Response().Header()["Content-Type"] = []string{"application/json; charset=UTF-8"}
 	c.Response().Write([]byte("["))
-	for i, chID := range channels {
+	for i, chIDStr := range channelIdStrs {
+		chIDi, _ := strconv.Atoi(chIDStr)
+		chID := int64(chIDi)
 		read, ok := preLastReads[chID]
 		if !ok {
 			read = 0
@@ -126,7 +126,7 @@ func fetchUnread(c echo.Context) error {
 			cnt = 0
 		}
 		c.Response().Write([]byte(`{"channel_id":` + strconv.Itoa(int(chID)) + `,"unread":` + strconv.Itoa(cnt-int(read)) + `}`))
-		if i+1 != len(channels) {
+		if i+1 != len(channelIdStrs) {
 			c.Response().Write([]byte(","))
 		}
 	}
