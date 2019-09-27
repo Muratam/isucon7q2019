@@ -34,7 +34,7 @@ func postAddChannel(c echo.Context) error {
 		return err
 	}
 	lastID, _ := res.LastInsertId()
-	channelIdToMessagesServer.Set(strconv.Itoa(int(lastID)), []Message{})
+	channelIdToMessagesServer.RPush(strconv.Itoa(int(lastID)))
 	return c.Redirect(http.StatusSeeOther,
 		fmt.Sprintf("/channel/%v", lastID))
 }
