@@ -180,7 +180,7 @@ func getHistory(c echo.Context) error {
 	}
 
 	offset := (page - 1) * N
-	got := channelIdToMessagesServer.LRange(strconv.Itoa(int(chID)), int(-offset-1-N), int(-offset-1))
+	got := channelIdToMessagesServer.LRange(strconv.Itoa(int(chID)), int(-offset-N), int(-offset-1))
 	messages := make([]Message, got.Len())
 	for i := 0; i < got.Len(); i++ {
 		got.Get(got.Len()-1-i, &messages[i])
