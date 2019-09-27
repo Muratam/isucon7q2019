@@ -21,5 +21,8 @@ var accountNameToIDServer = NewSyncMapServerConn(GetMasterServerAddress()+":8885
 var idToUserServer = NewSyncMapServerConn(GetMasterServerAddress()+":8884", isMasterServerIP)
 var userIdToLastReadServer = NewSyncMapServerConn(GetMasterServerAddress()+":8883", isMasterServerIP)
 
-// int
-var channelIdToMessageCountServer = NewSyncMapServerConn(GetMasterServerAddress()+":8882", isMasterServerIP)
+// string -> message[] (必ず存在するはず?)
+var channelIdToMessagesServer = NewSyncMapServerConn(GetMasterServerAddress()+":8882", isMasterServerIP)
+
+// key: cnt
+var messageNumServer = NewSyncMapServerConn(GetMasterServerAddress()+":8881", isMasterServerIP)

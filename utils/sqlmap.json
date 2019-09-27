@@ -7,21 +7,15 @@
   },
   message: {
     setInitializeFunction: [
-      'SELECT channel_id,COUNT(*) as cnt FROM message WHERE id <= 10000 GROUP BY channel_id'
+      'SELECT * FROM message WHERE id <= 10000 ORDER BY id',
+      'DELETE FROM message WHERE id > 10000'
     ],
-    getInitialize: [ 'DELETE FROM message WHERE id > 10000' ],
     getHistory: [
       'SELECT * FROM message WHERE channel_id = ? ORDER BY id DESC LIMIT ? OFFSET ?'
-    ],
-    getMessage: [
-      'SELECT * FROM message WHERE id > ? AND channel_id = ? ORDER BY id DESC LIMIT 100'
-    ],
-    postMessage: [
-      'INSERT INTO message (channel_id, user_id, content, created_at) VALUES (?, ?, ?, NOW())'
     ]
   },
   channel: {
-    getInitialize: [ 'DELETE FROM channel WHERE id > 10' ],
+    setInitializeFunction: [ 'DELETE FROM channel WHERE id > 10' ],
     getHistory: [ 'SELECT * FROM channel ORDER BY id' ],
     getProfile: [ 'SELECT * FROM channel ORDER BY id' ],
     getAddChannel: [ 'SELECT * FROM channel ORDER BY id' ],
@@ -31,6 +25,6 @@
     ]
   },
   image: {
-    getInitialize: [ 'SELECT name, data FROM image WHERE ID <= 1001' ]
+    setInitializeFunction: [ 'SELECT name, data FROM image WHERE ID <= 1001' ]
   }
 }
