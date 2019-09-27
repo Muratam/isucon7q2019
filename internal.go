@@ -170,36 +170,15 @@ func getMessage(c echo.Context) error {
 	}
 
 	if len(messages) > 0 {
-		_, err := db.Exec("INSERT INTO haveread (user_id, channel_id, message_id, updated_at, created_at)"+
-			" VALUES (?, ?, ?, NOW(), NOW())"+
-			" ON DUPLICATE KEY UPDATE message_id = ?, updated_at = NOW()",
-			userID, chanID, messages[0].ID, messages[0].ID)
-		if err != nil {
-			return err
-		}
+		// WARN: 遅そう.トランザクションは???
+		preLastReads := map[int64]int64{}
+		userIDStr := strconv.Itoa(int(userID))
+		userIdToLastReadServer.Get(userIDStr, &preLastReads)
+		preLastReads[chanID] = messages[0].ID
+		userIdToLastReadServer.Set(userIDStr, preLastReads)
 	}
 
 	return c.JSON(http.StatusOK, response)
-}
-
-func queryChannels() ([]int64, error) {
-	res := []int64{}
-	err := db.Select(&res, "SELECT id FROM channel")
-	return res, err
-}
-
-func queryHaveRead(userID, chID int64) (int64, error) {
-	h := HaveRead{}
-
-	err := db.Get(&h, "SELECT * FROM haveread WHERE user_id = ? AND channel_id = ?",
-		userID, chID)
-
-	if err == sql.ErrNoRows {
-		return 0, nil
-	} else if err != nil {
-		return 0, err
-	}
-	return h.MessageID, nil
 }
 
 func addMessage(channelID, userID int64, content string) (int64, error) {

@@ -14,7 +14,6 @@ import (
 
 func setInitializeFunction() {
 	idToUserServer.server.InitializeFunction = func() { // db.MustExec("DELETE FROM user WHERE id > 1000")
-		log.Println("idToUserServer init")
 		users := []User{}
 		idToUserServerMap := map[string]interface{}{}
 		err := db.Select(&users, "SELECT * FROM user WHERE id <= 1000")
@@ -28,7 +27,6 @@ func setInitializeFunction() {
 		idToUserServer.MSet(idToUserServerMap)
 	}
 	accountNameToIDServer.server.InitializeFunction = func() {
-		log.Println("accountNameToIDServer init")
 		users := []User{}
 		accountNametoIDServerMap := map[string]interface{}{}
 		err := db.Select(&users, "SELECT * FROM user WHERE id <= 1000")
@@ -46,8 +44,9 @@ func setInitializeFunction() {
 func getInitialize(c echo.Context) error {
 	db.MustExec("DELETE FROM channel WHERE id > 10")
 	db.MustExec("DELETE FROM message WHERE id > 10000")
-	db.MustExec("DELETE FROM haveread")
 	func() {
+		// db.MustExec("DELETE FROM haveread")
+		userIdToLastReadServer.FlushAll()
 		accountNameToIDServer.Initialize()
 		idToUserServer.Initialize()
 	}()
@@ -84,39 +83,33 @@ func fetchUnread(c echo.Context) error {
 	if userID == 0 {
 		return c.NoContent(http.StatusForbidden)
 	}
-
+	// TODO: 未読
 	time.Sleep(time.Second)
-
-	channels, err := queryChannels()
+	channels := []int64{}
+	err := db.Select(&channels, "SELECT id FROM channel")
 	if err != nil {
 		return err
 	}
-
-	resp := []map[string]interface{}{}
-
-	for _, chID := range channels {
-		lastID, err := queryHaveRead(userID, chID)
-		if err != nil {
-			return err
+	preLastReads := map[int64]int64{}
+	userIDStr := strconv.Itoa(int(userID))
+	userIdToLastReadServer.Get(userIDStr, &preLastReads)
+	resp := make([]map[string]interface{}, len(channels))
+	for i, chID := range channels {
+		lastID, ok := preLastReads[chID]
+		if !ok {
+			lastID = 0
 		}
-
 		var cnt int64
-		if lastID > 0 {
-			err = db.Get(&cnt,
-				"SELECT COUNT(*) as cnt FROM message WHERE channel_id = ? AND ? < id",
-				chID, lastID)
-		} else {
-			err = db.Get(&cnt,
-				"SELECT COUNT(*) as cnt FROM message WHERE channel_id = ?",
-				chID)
-		}
+		err = db.Get(&cnt,
+			"SELECT COUNT(*) as cnt FROM message WHERE channel_id = ? AND ? < id",
+			chID, lastID)
 		if err != nil {
 			return err
 		}
-		r := map[string]interface{}{
+		resp[i] = map[string]interface{}{
 			"channel_id": chID,
-			"unread":     cnt}
-		resp = append(resp, r)
+			"unread":     cnt,
+		}
 	}
 
 	return c.JSON(http.StatusOK, resp)
