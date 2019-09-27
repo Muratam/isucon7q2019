@@ -31,7 +31,3 @@ type ChannelInfo struct {
 	UpdatedAt   time.Time `db:"updated_at"`
 	CreatedAt   time.Time `db:"created_at"`
 }
-type IdAndCount struct {
-	ChannelID int64 `db:"channel_id"`
-	Count     int64 `db:"cnt"`
-}

@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"os"
 	"os/exec"
+	"sort"
 	"strconv"
 	"sync"
 
@@ -39,23 +40,37 @@ func setInitializeFunction() {
 		}
 		accountNameToIDServer.MSet(accountNametoIDServerMap)
 	}
-	channelIdToMessageCountServer.server.InitializeFunction = func() {
-		idAndCounts := []IdAndCount{} // db.MustExec("DELETE FROM message WHERE id > 10000")
-		err := db.Select(&idAndCounts, "SELECT channel_id,COUNT(*) as cnt FROM message WHERE id <= 10000 GROUP BY channel_id")
+	channelIdToMessagesServer.server.InitializeFunction = func() {
+		messages := []Message{} // db.MustExec("DELETE FROM message WHERE id > 10000")
+		err := db.Select(&messages, "SELECT * FROM message WHERE id <= 10000 ORDER BY id")
 		if err != nil {
 			panic(err)
 		}
-		idToCountMap := map[string]interface{}{}
+		localMap := map[string][]Message{}
 		for i := 1; i <= 10; i++ {
-			idToCountMap[strconv.Itoa(i)] = 0
+			localMap[strconv.Itoa(i)] = []Message{}
 		}
 		for i := 2711; i <= 2900; i++ {
-			idToCountMap[strconv.Itoa(i)] = 0
+			localMap[strconv.Itoa(i)] = []Message{}
 		}
-		for _, ic := range idAndCounts {
-			idToCountMap[strconv.Itoa(int(ic.ChannelID))] = int(ic.Count)
+		for _, msg := range messages {
+			key := strconv.Itoa(int(msg.ChannelID))
+			if val, ok := localMap[key]; ok {
+				localMap[key] = append(val, msg)
+			} else {
+				localMap[key] = []Message{msg}
+			}
 		}
-		channelIdToMessageCountServer.MSet(idToCountMap)
+		for k, v := range localMap {
+			arr := make([]interface{}, len(v))
+			for i, vv := range v {
+				arr[i] = vv
+			}
+			channelIdToMessagesServer.RPush(k, arr...)
+		}
+	}
+	messageNumServer.server.InitializeFunction = func() {
+		messageNumServer.Set("cnt", 10000)
 	}
 }
 
@@ -70,7 +85,8 @@ func getInitialize(c echo.Context) error {
 		userIdToLastReadServer.FlushAll()
 		accountNameToIDServer.Initialize()
 		idToUserServer.Initialize()
-		channelIdToMessageCountServer.Initialize()
+		channelIdToMessagesServer.Initialize()
+		messageNumServer.Initialize()
 	}()
 	func() { // db.MustExec("DELETE FROM image WHERE id > 1001")
 		exec.Command("rm -rf /home/isucon/icons").Run()
@@ -105,8 +121,7 @@ func fetchUnread(c echo.Context) error {
 	if userID == 0 {
 		return c.NoContent(http.StatusForbidden)
 	}
-	channelIdStrs := channelIdToMessageCountServer.AllKeys()
-	mGot := channelIdToMessageCountServer.MGet(channelIdStrs)
+	channelIdStrs := channelIdToMessagesServer.AllKeys()
 	preLastReads := map[int64]int64{}
 	userIDStr := strconv.Itoa(int(userID))
 	userIdToLastReadServer.Get(userIDStr, &preLastReads)
@@ -120,11 +135,7 @@ func fetchUnread(c echo.Context) error {
 		if !ok {
 			read = 0
 		}
-		cnt := 0
-		ok = mGot.Get(strconv.Itoa(int(chID)), &cnt)
-		if !ok {
-			cnt = 0
-		}
+		cnt := channelIdToMessagesServer.LLen(strconv.Itoa(int(chID)))
 		c.Response().Write([]byte(`{"channel_id":` + strconv.Itoa(int(chID)) + `,"unread":` + strconv.Itoa(cnt-int(read)) + `}`))
 		if i+1 != len(channelIdStrs) {
 			c.Response().Write([]byte(","))
@@ -158,11 +169,7 @@ func getHistory(c echo.Context) error {
 	}
 
 	const N = 20
-	var cnti int
-	ok := channelIdToMessageCountServer.Get(strconv.Itoa(int(chID)), &cnti)
-	if !ok {
-		cnti = 0
-	}
+	cnti := channelIdToMessagesServer.LLen(strconv.Itoa(int(chID)))
 	cnt := int64(cnti)
 	maxPage := int64(cnt+N-1) / N
 	if maxPage == 0 {
@@ -172,14 +179,13 @@ func getHistory(c echo.Context) error {
 		return ErrBadReqeust
 	}
 
-	messages := []Message{}
-	err = db.Select(&messages,
-		"SELECT * FROM message WHERE channel_id = ? ORDER BY id DESC LIMIT ? OFFSET ?",
-		chID, N, (page-1)*N)
-	if err != nil {
-		return err
+	offset := (page - 1) * N
+	got := channelIdToMessagesServer.LRange(strconv.Itoa(int(chID)), int(-offset-N), int(-offset-1))
+	messages := make([]Message, got.Len())
+	for i := 0; i < got.Len(); i++ {
+		got.Get(got.Len()-1-i, &messages[i])
 	}
-
+	// 5 6 7 8 9 10 [11 12 13]
 	mjson := make([]map[string]interface{}, 0)
 	for i := len(messages) - 1; i >= 0; i-- {
 		r, err := jsonifyMessage(messages[i])
@@ -219,23 +225,27 @@ func getMessage(c echo.Context) error {
 		return err
 	}
 	//  35 33 31 ... 20
+	got := channelIdToMessagesServer.LRange(strconv.Itoa(int(chanID)), -100, -1)
+	messagespre := make([]Message, got.Len())
+	for i := 0; i < got.Len(); i++ {
+		got.Get(i, &messagespre[i])
+	}
+	sort.Slice(messagespre, func(i, j int) bool {
+		return messagespre[i].ID > messagespre[j].ID
+	})
 	messages := []Message{}
-	err = db.Select(&messages,
-		"SELECT * FROM message WHERE id > ? AND channel_id = ? ORDER BY id DESC LIMIT 100",
-		lastID, chanID)
-	if err != nil {
-		return err
+	for _, msg := range messagespre {
+		if msg.ID <= lastID {
+			break
+		}
+		messages = append(messages, msg)
 	}
 	// [35 33 31 ... 20] [18 ...]
 	if len(messages) > 0 {
 		preLastReads := map[int64]int64{}
 		userIDStr := strconv.Itoa(int(userID))
 		userIdToLastReadServer.Get(userIDStr, &preLastReads)
-		var cnti int
-		ok := channelIdToMessageCountServer.Get(strconv.Itoa(int(chanID)), &cnti)
-		if !ok {
-			cnti = 0
-		}
+		cnti := channelIdToMessagesServer.LLen(strconv.Itoa(int(chanID)))
 		preLastReads[chanID] = int64(cnti)
 		userIdToLastReadServer.Set(userIDStr, preLastReads)
 	}

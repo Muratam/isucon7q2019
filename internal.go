@@ -130,7 +130,6 @@ func ensureLogin(c echo.Context) (*User, error) {
 
 }
 
-// TODO: 多分N+1
 func jsonifyMessage(m Message) (map[string]interface{}, error) {
 	u := User{}
 	ok := idToUserServer.Get(strconv.Itoa(int(m.UserID)), &u)

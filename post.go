@@ -34,7 +34,7 @@ func postAddChannel(c echo.Context) error {
 		return err
 	}
 	lastID, _ := res.LastInsertId()
-	channelIdToMessageCountServer.Set(strconv.Itoa(int(lastID)), 0)
+	channelIdToMessagesServer.RPush(strconv.Itoa(int(lastID)))
 	return c.Redirect(http.StatusSeeOther,
 		fmt.Sprintf("/channel/%v", lastID))
 }
@@ -116,13 +116,15 @@ func postMessage(c echo.Context) error {
 	} else {
 		chanID = int64(x)
 	}
-	_, err = db.Exec(
-		"INSERT INTO message (channel_id, user_id, content, created_at) VALUES (?, ?, ?, NOW())",
-		chanID, user.ID, message)
-	channelIdToMessageCountServer.IncrBy(strconv.Itoa(int(chanID)), 1)
-	if err != nil {
-		return err
+	id := messageNumServer.IncrBy("cnt", 1)
+	msg := Message{
+		ID:        int64(id),
+		ChannelID: chanID,
+		UserID:    user.ID,
+		Content:   message,
+		CreatedAt: time.Now().Truncate(time.Second),
 	}
+	channelIdToMessagesServer.RPush(strconv.Itoa(int(chanID)), msg)
 	return c.NoContent(204)
 }
 func postRegister(c echo.Context) error {
