@@ -108,7 +108,9 @@ func fetchUnread(c echo.Context) error {
 	preLastReads := map[int64]int64{}
 	userIDStr := strconv.Itoa(int(userID))
 	userIdToLastReadServer.Get(userIDStr, &preLastReads)
-	resp := make([]map[string]interface{}, len(channels))
+	c.Response().WriteHeader(http.StatusOK)
+	c.Response().Header()["Content-Type"] = []string{"application/json; charset=UTF-8"}
+	c.Response().Write([]byte("["))
 	for i, chID := range channels {
 		read, ok := preLastReads[chID]
 		if !ok {
@@ -119,13 +121,14 @@ func fetchUnread(c echo.Context) error {
 		if !ok {
 			cnt = 0
 		}
-		resp[i] = map[string]interface{}{
-			"channel_id": chID,
-			"unread":     int64(cnt) - read,
+		c.Response().Write([]byte(`{"channel_id":` + strconv.Itoa(int(chID)) + `,"unread":` + strconv.Itoa(cnt-int(read)) + `}`))
+		if i+1 != len(channels) {
+			c.Response().Write([]byte(","))
 		}
 	}
+	c.Response().Write([]byte("]"))
 
-	return c.JSON(http.StatusOK, resp)
+	return nil
 }
 
 func getHistory(c echo.Context) error {
