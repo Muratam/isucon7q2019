@@ -6,6 +6,7 @@ import (
 	"os"
 	"os/exec"
 	"strconv"
+	"sync"
 
 	"github.com/labstack/echo"
 	"github.com/labstack/echo-contrib/session"
@@ -52,7 +53,10 @@ func setInitializeFunction() {
 	}
 }
 
+var sessionCache = sync.Map{}
+
 func getInitialize(c echo.Context) error {
+	sessionCache = sync.Map{}
 	db.MustExec("DELETE FROM channel WHERE id > 10")
 	db.MustExec("DELETE FROM message WHERE id > 10000")
 	func() {
@@ -200,6 +204,57 @@ func getHistory(c echo.Context) error {
 	})
 	return nil
 }
+func getMessage(c echo.Context) error {
+	userID := sessUserID(c)
+	if userID == 0 {
+		return c.NoContent(http.StatusForbidden)
+	}
+
+	chanID, err := strconv.ParseInt(c.QueryParam("channel_id"), 10, 64)
+	if err != nil {
+		return err
+	}
+	lastID, err := strconv.ParseInt(c.QueryParam("last_message_id"), 10, 64)
+	if err != nil {
+		return err
+	}
+
+	messages := []Message{}
+	err = db.Select(&messages,
+		"SELECT * FROM message WHERE id > ? AND channel_id = ? ORDER BY id DESC LIMIT 100",
+		lastID, chanID)
+	if err != nil {
+		return err
+	}
+
+	response := make([]map[string]interface{}, 0)
+	for i := len(messages) - 1; i >= 0; i-- {
+		m := messages[i]
+		r, err := jsonifyMessage(m)
+		if err != nil {
+			return err
+		}
+		response = append(response, r)
+	}
+
+	if len(messages) > 0 {
+		// WARN: 遅そう.トランザクションは???
+		preLastReads := map[int64]int64{}
+		userIDStr := strconv.Itoa(int(userID))
+		userIdToLastReadServer.Get(userIDStr, &preLastReads)
+		var cnt int64
+		// 読んだ個数を記録
+		err = db.Get(&cnt, "SELECT COUNT(*) FROM message WHERE channel_id = ? AND id <= ?",
+			chanID, messages[0].ID)
+		if err != nil {
+			return err
+		}
+		preLastReads[chanID] = cnt
+		userIdToLastReadServer.Set(userIDStr, preLastReads)
+	}
+
+	return c.JSON(http.StatusOK, response)
+}
 
 func getProfile(c echo.Context) error {
 	self, err := ensureLogin(c)
@@ -252,6 +307,7 @@ func getAddChannel(c echo.Context) error {
 		"User":      self,
 	})
 }
+
 func getIndex(c echo.Context) error {
 	userID := sessUserID(c)
 	if userID != 0 {
