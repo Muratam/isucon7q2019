@@ -1,27 +1,28 @@
 {
   user: { setInitializeFunction: [ 'SELECT * FROM user WHERE id <= 1000' ] },
+  message: {
+    setInitializeFunction: [
+      'SELECT channel_id,COUNT(*) as cnt FROM message WHERE id <= 10000 GROUP BY channel_id'
+    ],
+    getInitialize: [ 'DELETE FROM message WHERE id > 10000' ],
+    getHistory: [
+      'SELECT * FROM message WHERE channel_id = ? ORDER BY id DESC LIMIT ? OFFSET ?'
+    ],
+    getMessage: [
+      'SELECT * FROM message WHERE id > ? AND channel_id = ? ORDER BY id DESC LIMIT 100'
+    ],
+    postMessage: [
+      'INSERT INTO message (channel_id, user_id, content, created_at) VALUES (?, ?, ?, NOW())'
+    ]
+  },
   channel: {
     getInitialize: [ 'DELETE FROM channel WHERE id > 10' ],
-    fetchUnread: [ 'SELECT id FROM channel' ],
     getHistory: [ 'SELECT * FROM channel ORDER BY id' ],
     getProfile: [ 'SELECT * FROM channel ORDER BY id' ],
     getAddChannel: [ 'SELECT * FROM channel ORDER BY id' ],
     getChannel: [ 'SELECT * FROM channel ORDER BY id' ],
     postAddChannel: [
       'INSERT INTO channel (name, description, updated_at, created_at) VALUES (?, ?, NOW(), NOW())'
-    ]
-  },
-  message: {
-    getInitialize: [ 'DELETE FROM message WHERE id > 10000' ],
-    fetchUnread: [
-      'SELECT COUNT(*) as cnt FROM message WHERE channel_id = ? AND ? < id'
-    ],
-    getHistory: [ 'SELECT COUNT(*) as cnt FROM message WHERE channel_id = ?' ],
-    queryMessages: [
-      'SELECT * FROM message WHERE id > ? AND channel_id = ? ORDER BY id DESC LIMIT 100'
-    ],
-    addMessage: [
-      'INSERT INTO message (channel_id, user_id, content, created_at) VALUES (?, ?, ?, NOW())'
     ]
   },
   image: {

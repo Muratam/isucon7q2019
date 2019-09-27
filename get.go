@@ -218,7 +218,7 @@ func getMessage(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-
+	//  35 33 31 ... 20
 	messages := []Message{}
 	err = db.Select(&messages,
 		"SELECT * FROM message WHERE id > ? AND channel_id = ? ORDER BY id DESC LIMIT 100",
@@ -226,29 +226,31 @@ func getMessage(c echo.Context) error {
 	if err != nil {
 		return err
 	}
-
+	// [35 33 31 ... 20] [18 ...]
 	if len(messages) > 0 {
-		// WARN: 遅そう.トランザクションは???
 		preLastReads := map[int64]int64{}
 		userIDStr := strconv.Itoa(int(userID))
 		userIdToLastReadServer.Get(userIDStr, &preLastReads)
-		var cnt int64
-		// 読んだ個数を記録
-		err = db.Get(&cnt, "SELECT COUNT(*) FROM message WHERE channel_id = ? AND id <= ?",
-			chanID, messages[0].ID)
-		if err != nil {
-			return err
+		var cnti int
+		ok := channelIdToMessageCountServer.Get(strconv.Itoa(int(chanID)), &cnti)
+		if !ok {
+			cnti = 0
 		}
-		preLastReads[chanID] = cnt
+		preLastReads[chanID] = int64(cnti)
 		userIdToLastReadServer.Set(userIDStr, preLastReads)
 	}
 	c.Response().WriteHeader(http.StatusOK)
 	c.Response().Header()["Content-Type"] = []string{"application/json; charset=UTF-8"}
 	c.Response().Write([]byte("["))
+	userIDStrs := make([]string, len(messages))
+	for i, m := range messages {
+		userIDStrs[i] = strconv.Itoa(int(m.UserID))
+	}
+	mGot := idToUserServer.MGet(userIDStrs)
 	for i := len(messages) - 1; i >= 0; i-- {
 		m := messages[i]
 		u := User{}
-		idToUserServer.Get(strconv.Itoa(int(m.UserID)), &u)
+		mGot.Get(strconv.Itoa(int(m.UserID)), &u)
 		c.Response().Write([]byte( // WARN escape
 			`{"id":` + strconv.Itoa(int(m.ID)) +
 				`,"date":"` + m.CreatedAt.Format("2006/01/02 15:04:05") + `"` +
