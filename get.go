@@ -227,16 +227,6 @@ func getMessage(c echo.Context) error {
 		return err
 	}
 
-	response := make([]map[string]interface{}, 0)
-	for i := len(messages) - 1; i >= 0; i-- {
-		m := messages[i]
-		r, err := jsonifyMessage(m)
-		if err != nil {
-			return err
-		}
-		response = append(response, r)
-	}
-
 	if len(messages) > 0 {
 		// WARN: 遅そう.トランザクションは???
 		preLastReads := map[int64]int64{}
@@ -252,8 +242,27 @@ func getMessage(c echo.Context) error {
 		preLastReads[chanID] = cnt
 		userIdToLastReadServer.Set(userIDStr, preLastReads)
 	}
-
-	return c.JSON(http.StatusOK, response)
+	c.Response().WriteHeader(http.StatusOK)
+	c.Response().Header()["Content-Type"] = []string{"application/json; charset=UTF-8"}
+	c.Response().Write([]byte("["))
+	for i := len(messages) - 1; i >= 0; i-- {
+		m := messages[i]
+		u := User{}
+		idToUserServer.Get(strconv.Itoa(int(m.UserID)), &u)
+		c.Response().Write([]byte( // WARN escape
+			`{"id":` + strconv.Itoa(int(m.ID)) +
+				`,"date":"` + m.CreatedAt.Format("2006/01/02 15:04:05") + `"` +
+				`,"content":"` + m.Content + `"` +
+				`,"user":{"name":"` + u.Name + `"` +
+				`,"display_name":"` + u.DisplayName + `"` +
+				`,"avatar_icon":"` + u.AvatarIcon + `"` +
+				`}}`))
+		if i != 0 {
+			c.Response().Write([]byte(","))
+		}
+	}
+	c.Response().Write([]byte("]"))
+	return nil
 }
 
 func getProfile(c echo.Context) error {
